@@ -9,9 +9,12 @@ from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm
 from flask_gravatar import Gravatar
+from dotenv import load_dotenv
+import os
+
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.getenv('APP_SECRET_KEY')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 gravatar = Gravatar(app, size=100, rating='g', default='retro', force_default=False, force_lower=False, use_ssl=False, base_url=None)
@@ -61,7 +64,10 @@ class Comment(db.Model):
     parent_post = relationship("BlogPost", back_populates="comments")
     comment_author = relationship("User", back_populates="comments")
     text = db.Column(db.Text, nullable=False)
-db.create_all()
+
+
+with app.app_context():
+    db.create_all()
 
 
 def admin_only(f):
@@ -84,19 +90,19 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
 
-        if User.query.filter_by(email=form.email.data).first():
-            print(User.query.filter_by(email=form.email.data).first())
+        if User.query.filter_by(email=os.getenv('BLOG_EMAIL')).first():
+            print(User.query.filter_by(email=os.getenv('BLOG_EMAIL')).first())
             #User already exists
             flash("You've already signed up with that email, log in instead!")
             return redirect(url_for('login'))
 
         hash_and_salted_password = generate_password_hash(
-            form.password.data,
+            os.getenv('BLOG_PASSWORD'),
             method='pbkdf2:sha256',
             salt_length=8
         )
         new_user = User(
-            email=form.email.data,
+            email=os.getenv('BLOG_EMAIL'),
             name=form.name.data,
             password=hash_and_salted_password,
         )
@@ -112,8 +118,8 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
+        email = os.getenv('BLOG_EMAIL')
+        password = os.getenv('BLOG_PASSWORD')
 
         user = User.query.filter_by(email=email).first()
         # Email doesn't exist or password incorrect.
